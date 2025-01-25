@@ -22,6 +22,12 @@ const connectDB = async () => {
             w: 'majority'
         });
         console.log('MongoDB connected successfully');
+        
+        // Start server only after successful DB connection
+        const PORT = process.env.PORT || 3000;
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`Server is running on port ${PORT}`);
+        });
     } catch (err) {
         console.error('MongoDB connection error:', err);
         // Retry connection after 5 seconds
@@ -83,15 +89,6 @@ if (process.env.NODE_ENV === 'production') {
         res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
     });
 }
-
-const PORT = process.env.PORT || 5000;
-
-// Start server only after MongoDB connects
-mongoose.connection.once('open', () => {
-    app.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT}`);
-    });
-});
 
 // Handle MongoDB connection events
 mongoose.connection.on('error', (err) => {
