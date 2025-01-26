@@ -106,7 +106,7 @@ function DonorList() {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get(selectedBloodGroup === 'All' ? '/' : `/?bloodGroup=${selectedBloodGroup}`);
+      const response = await api.get(selectedBloodGroup === 'All' ? '' : `?bloodGroup=${selectedBloodGroup}`);
       console.log('Fetched donors:', response.data);
       setDonors(response.data);
     } catch (err) {
@@ -124,9 +124,7 @@ function DonorList() {
   };
 
   const handleBloodGroupChange = (event) => {
-    const newBloodGroup = event.target.value;
-    console.log('Selected blood group:', newBloodGroup);
-    setSelectedBloodGroup(newBloodGroup);
+    setSelectedBloodGroup(event.target.value);
   };
 
   const handleSnackbarClose = () => {
