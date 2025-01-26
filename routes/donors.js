@@ -5,9 +5,13 @@ const Donor = require('../models/Donor');
 // Get all donors or filter by blood group
 router.get('/', async (req, res) => {
     console.log('GET /api/donors request received');
+    console.log('Query params:', req.query);
+    
     try {
         const { bloodGroup } = req.query;
         const query = bloodGroup && bloodGroup !== 'All' ? { bloodGroup } : {};
+        
+        console.log('MongoDB query:', query);
         
         const donors = await Donor.find(query)
             .sort({ createdAt: -1 })
@@ -30,14 +34,11 @@ router.post('/', async (req, res) => {
     console.log('Request body:', req.body);
     
     try {
-        console.log('Received donor registration:', req.body);
-        
         // Validate required fields
         const requiredFields = ['name', 'location', 'email', 'bloodGroup'];
         const missingFields = requiredFields.filter(field => !req.body[field]);
         
         if (missingFields.length > 0) {
-            console.log('Missing fields:', missingFields);
             return res.status(400).json({
                 error: `Missing required fields: ${missingFields.join(', ')}`
             });
@@ -45,56 +46,29 @@ router.post('/', async (req, res) => {
 
         // Validate contact information
         if (!req.body.phoneNumber && !req.body.facebookProfileUrl) {
-            console.log('Missing contact information');
             return res.status(400).json({ 
                 error: 'Either Phone Number or Facebook Profile URL is required'
             });
         }
 
-        // Validate phone number format if provided
-        if (req.body.phoneNumber && !/^\d{11}$/.test(req.body.phoneNumber)) {
-            console.log('Invalid phone number format');
-            return res.status(400).json({
-                error: 'Phone number must be exactly 11 digits'
-            });
-        }
-
-        // Validate email format
-        if (!req.body.email.endsWith('@gmail.com')) {
-            console.log('Invalid email format');
-            return res.status(400).json({
-                error: 'Please use a valid Gmail address'
-            });
-        }
-
-        // Create and save donor
-        console.log('Creating new donor with data:', req.body);
+        // Create new donor
         const donor = new Donor(req.body);
-        const savedDonor = await donor.save();
-        console.log('Donor saved successfully:', savedDonor._id);
+        await donor.save();
         
-        res.status(201).json({
-            message: 'Registration successful!',
-            donor: savedDonor
-        });
+        console.log('New donor registered:', donor);
+        res.status(201).json(donor);
     } catch (error) {
-        console.error('Error creating donor:', error);
+        console.error('Error registering donor:', error);
         
-        if (error.name === 'ValidationError') {
-            const errorMessage = Object.values(error.errors).map(err => err.message).join('. ');
-            console.log('Validation error:', errorMessage);
-            return res.status(400).json({ error: errorMessage });
-        }
-        
+        // Handle duplicate email error
         if (error.code === 11000) {
-            console.log('Duplicate email error');
-            return res.status(400).json({ 
-                error: 'A donor with this email already exists'
+            return res.status(400).json({
+                error: 'A donor with this email already exists.'
             });
         }
         
         res.status(500).json({ 
-            error: 'Registration failed. Please try again.',
+            error: 'Error registering donor. Please try again.',
             details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }

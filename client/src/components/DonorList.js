@@ -107,6 +107,7 @@ function DonorList() {
       setLoading(true);
       setError(null);
       const response = await api.get(selectedBloodGroup === 'All' ? '/' : `/?bloodGroup=${selectedBloodGroup}`);
+      console.log('Fetched donors:', response.data);
       setDonors(response.data);
     } catch (err) {
       console.error('Error fetching donors:', err);
@@ -123,7 +124,9 @@ function DonorList() {
   };
 
   const handleBloodGroupChange = (event) => {
-    setSelectedBloodGroup(event.target.value);
+    const newBloodGroup = event.target.value;
+    console.log('Selected blood group:', newBloodGroup);
+    setSelectedBloodGroup(newBloodGroup);
   };
 
   const handleSnackbarClose = () => {
@@ -232,25 +235,57 @@ function DonorList() {
                       value={selectedBloodGroup}
                       onChange={handleBloodGroupChange}
                       variant="outlined"
+                      InputLabelProps={{
+                        sx: {
+                          color: 'primary.main',
+                          '&.Mui-focused': {
+                            color: 'primary.main',
+                          },
+                        },
+                      }}
                       sx={{ 
                         bgcolor: 'white',
                         borderRadius: 1,
                         '& .MuiOutlinedInput-root': {
+                          color: 'primary.main',
                           '& fieldset': {
                             borderColor: 'transparent',
                           },
                           '&:hover fieldset': {
-                            borderColor: 'transparent',
+                            borderColor: 'primary.light',
                           },
                           '&.Mui-focused fieldset': {
                             borderColor: 'primary.main',
                           },
                         },
+                        '& .MuiSelect-select': {
+                          color: 'primary.main',
+                        },
+                        '& .MuiMenuItem-root': {
+                          color: 'primary.main',
+                        }
                       }}
                     >
-                      {bloodGroups.map((bloodGroup) => (
-                        <MenuItem key={bloodGroup} value={bloodGroup}>
-                          {bloodGroup}
+                      {bloodGroups.map((group) => (
+                        <MenuItem 
+                          key={group} 
+                          value={group}
+                          sx={{
+                            color: 'primary.main',
+                            '&:hover': {
+                              bgcolor: 'primary.light',
+                              color: 'white',
+                            },
+                            '&.Mui-selected': {
+                              bgcolor: 'primary.main',
+                              color: 'white',
+                              '&:hover': {
+                                bgcolor: 'primary.dark',
+                              },
+                            },
+                          }}
+                        >
+                          {group}
                         </MenuItem>
                       ))}
                     </TextField>
