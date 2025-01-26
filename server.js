@@ -17,27 +17,29 @@ console.log('Current environment:', {
     PORT: process.env.PORT || 5000
 });
 
-// Force HTTPS and handle domain redirects
+// Security middleware
 app.use((req, res, next) => {
-    // Clear browser cache headers
-    res.set({
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'Surrogate-Control': 'no-store'
-    });
-
-    const host = req.get('host');
-    const protocol = req.protocol;
-
-    // If we're not on HTTPS, redirect to HTTPS
-    if (process.env.NODE_ENV === 'production' && protocol !== 'https') {
-        return res.redirect(301, `https://${host}${req.originalUrl}`);
+    // Force HTTPS
+    if (process.env.NODE_ENV === 'production' && !req.secure && req.get('x-forwarded-proto') !== 'https') {
+        return res.redirect(301, `https://${req.get('host')}${req.url}`);
     }
 
-    // If we're on the Render domain, redirect to custom domain
+    // Security headers
+    res.set({
+        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'X-XSS-Protection': '1; mode=block',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    });
+
+    // Handle domain redirect
+    const host = req.get('host');
     if (host.includes('onrender.com')) {
-        return res.redirect(301, `https://bloodinneed.org${req.originalUrl}`);
+        return res.redirect(301, `https://bloodinneed.org${req.url}`);
     }
 
     next();
@@ -45,7 +47,7 @@ app.use((req, res, next) => {
 
 // CORS configuration
 app.use(cors({
-    origin: true,
+    origin: ['https://bloodinneed.org', 'https://www.bloodinneed.org'],
     credentials: true,
     optionsSuccessStatus: 200
 }));
@@ -53,20 +55,13 @@ app.use(cors({
 // Parse JSON bodies
 app.use(express.json());
 
-// API routes first
+// API routes
 app.use('/api/donors', donorRoutes);
 
-// Serve static files with cache control
-app.use(express.static(path.join(__dirname, 'client/build'), {
-    maxAge: '0',
-    setHeaders: (res, path) => {
-        res.set({
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-        });
-    }
-}));
+// Serve static files
+const staticPath = path.join(__dirname, 'client/build');
+console.log('Static files path:', staticPath);
+app.use(express.static(staticPath));
 
 // MongoDB Atlas Connection
 const connectDB = async () => {
@@ -96,12 +91,12 @@ const connectDB = async () => {
 // Handle all other routes by serving the React app
 app.get('*', (req, res) => {
     console.log('Serving React app for path:', req.path);
-    res.set({
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
+    res.sendFile(path.join(__dirname, 'client/build/index.html'), err => {
+        if (err) {
+            console.error('Error sending file:', err);
+            res.status(500).send('Error loading application');
+        }
     });
-    res.sendFile(path.join(__dirname, 'client/build/index.html'));
 });
 
 // Connect to database and start server
