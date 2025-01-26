@@ -53,6 +53,9 @@ app.use(cors({
 // Parse JSON bodies
 app.use(express.json());
 
+// API routes first
+app.use('/api/donors', donorRoutes);
+
 // Serve static files with cache control
 app.use(express.static(path.join(__dirname, 'client/build'), {
     maxAge: '0',
@@ -64,9 +67,6 @@ app.use(express.static(path.join(__dirname, 'client/build'), {
         });
     }
 }));
-
-// API routes
-app.use('/api/donors', donorRoutes);
 
 // MongoDB Atlas Connection
 const connectDB = async () => {
@@ -95,12 +95,13 @@ const connectDB = async () => {
 
 // Handle all other routes by serving the React app
 app.get('*', (req, res) => {
+    console.log('Serving React app for path:', req.path);
     res.set({
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0'
     });
-    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+    res.sendFile(path.join(__dirname, 'client/build/index.html'));
 });
 
 // Connect to database and start server
