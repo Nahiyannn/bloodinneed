@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, parseISO } from 'date-fns';
 import {
   Container,
   Paper,
@@ -9,192 +8,66 @@ import {
   Typography,
   Box,
   MenuItem,
+  Grid,
+  Alert,
   AppBar,
   Toolbar,
   Stack,
-  ThemeProvider,
-  createTheme,
-  Grid,
-  Snackbar,
   IconButton,
   Divider,
+  ThemeProvider,
+  createTheme,
+  Snackbar
 } from '@mui/material';
-import { Favorite, Search, ArrowBack, LocalHospital, BloodtypeOutlined, Phone } from '@mui/icons-material';
+import {
+  Favorite,
+  Search,
+  ArrowBack,
+  LocalHospital,
+  BloodtypeOutlined,
+  Phone
+} from '@mui/icons-material';
+import { format } from 'date-fns';
 import api from '../config/api';
-import TermsDialog from './TermsDialog';
+
+const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 const theme = createTheme({
   palette: {
-    mode: 'light',
     primary: {
       main: '#d32f2f',
       light: '#ef5350',
       dark: '#c62828',
-      contrastText: '#fff',
     },
     secondary: {
       main: '#f5f5f5',
       light: '#ffffff',
       dark: '#e0e0e0',
-      contrastText: '#000',
-    },
-    background: {
-      default: '#fafafa',
-      paper: '#ffffff',
-    },
-    error: {
-      main: '#d32f2f',
-    },
-    success: {
-      main: '#2e7d32',
-    },
-  },
-  typography: {
-    fontFamily: "'Inter', 'Roboto', 'Arial', sans-serif",
-    h3: {
-      fontWeight: 700,
-      letterSpacing: '-0.5px',
-    },
-    h5: {
-      fontWeight: 600,
-      letterSpacing: '-0.5px',
-    },
-    button: {
-      textTransform: 'none',
-      fontWeight: 600,
-    },
-  },
-  shape: {
-    borderRadius: 12,
-  },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: 8,
-          padding: '10px 24px',
-          fontSize: '1rem',
-        },
-        containedPrimary: {
-          background: 'linear-gradient(45deg, #d32f2f 30%, #ef5350 90%)',
-          boxShadow: '0 3px 12px rgba(211, 47, 47, 0.3)',
-          '&:hover': {
-            background: 'linear-gradient(45deg, #c62828 30%, #d32f2f 90%)',
-            boxShadow: '0 4px 15px rgba(211, 47, 47, 0.4)',
-          },
-        },
-      },
-    },
-    MuiTextField: {
-      styleOverrides: {
-        root: {
-          '& .MuiOutlinedInput-root': {
-            borderRadius: 8,
-            backgroundColor: '#fff',
-            '&:hover fieldset': {
-              borderColor: '#d32f2f',
-            },
-            '&.Mui-focused fieldset': {
-              borderColor: '#d32f2f',
-            },
-          },
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          borderRadius: 16,
-        },
-      },
-    },
-  },
+    }
+  }
 });
-
-const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 function DonorForm() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
     location: '',
+    bloodGroup: '',
     email: '',
     phoneNumber: '',
     lastDonatedDate: '',
-    bloodGroup: '',
-    facebookProfileUrl: '',
+    facebookProfileUrl: ''
   });
-  const [errors, setErrors] = useState({});
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
   const [termsDialog, setTermsDialog] = useState({
     open: false,
     action: null,
     title: '',
   });
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: '',
-  });
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    // Name validation
-    if (!formData.name || formData.name.trim().length < 2) {
-      newErrors.name = 'Name is required and must be at least 2 characters';
-    }
-
-    // Blood group validation
-    if (!formData.bloodGroup) {
-      newErrors.bloodGroup = 'Please select a blood group';
-    }
-
-    // Location validation
-    if (!formData.location || formData.location.trim().length < 2) {
-      newErrors.location = 'Location is required';
-    }
-
-    // Contact validation - either phone or Facebook must be provided
-    const hasValidPhone = formData.phoneNumber && /^\d{11}$/.test(formData.phoneNumber);
-    
-    // Improved Facebook URL validation - allow usernames with more characters and special chars
-    const facebookUrlRegex = /^https?:\/\/(www\.)?(facebook|fb)\.com\/[\w.-]+[^/]$/;
-    const hasValidFacebook = formData.facebookProfileUrl && facebookUrlRegex.test(formData.facebookProfileUrl);
-
-    if (!hasValidPhone && !hasValidFacebook) {
-      newErrors.phoneNumber = 'Either Phone Number or Facebook Profile URL is required';
-      newErrors.facebookProfileUrl = 'Either Phone Number or Facebook Profile URL is required';
-    } else {
-      // If phone is provided, validate format
-      if (formData.phoneNumber && !hasValidPhone) {
-        newErrors.phoneNumber = 'Phone Number must be exactly 11 digits';
-      }
-      // If Facebook URL is provided, validate format
-      if (formData.facebookProfileUrl && !hasValidFacebook) {
-        newErrors.facebookProfileUrl = 'Please enter a complete Facebook profile URL (e.g., https://www.facebook.com/username)';
-      }
-    }
-
-    // Email validation
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-    if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'Please enter a valid Gmail address';
-    }
-
-    // Date validation
-    if (formData.lastDonatedDate) {
-      const donatedDate = new Date(formData.lastDonatedDate);
-      const currentDate = new Date();
-      if (isNaN(donatedDate.getTime())) {
-        newErrors.lastDonatedDate = 'Please enter a valid date';
-      } else if (donatedDate > currentDate) {
-        newErrors.lastDonatedDate = 'Last donated date cannot be in the future';
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -230,30 +103,88 @@ function DonorForm() {
       return;
     }
 
-    setFormData({ ...formData, [name]: value });
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: '' });
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    setError(''); // Clear error when user types
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    
-    if (!validateForm()) {
-      setSnackbar({
-        open: true,
-        message: 'Please correct the errors in the form',
-        severity: 'error'
-      });
-      return;
-    }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError('');
+    setSuccess('');
 
-    setTermsDialog({
-      open: true,
-      action: 'submit',
-      title: 'Submit Donor Registration',
-    });
+    try {
+      // Client-side validation
+      if (!formData.name || !formData.location || !formData.bloodGroup || !formData.email) {
+        throw new Error('Please fill in all required fields');
+      }
+
+      if (!formData.phoneNumber && !formData.facebookProfileUrl) {
+        throw new Error('Please provide either Phone Number or Facebook Profile URL');
+      }
+
+      if (!formData.email.endsWith('@gmail.com')) {
+        throw new Error('Please use a valid Gmail address');
+      }
+
+      if (formData.phoneNumber && !/^\d{11}$/.test(formData.phoneNumber)) {
+        throw new Error('Phone number must be exactly 11 digits');
+      }
+
+      console.log('Form data passed validation:', formData);
+      console.log('Making API request to:', api.defaults.baseURL);
+      
+      const response = await api.post('/', formData);
+      console.log('Server response:', response.data);
+      
+      setSuccess('Registration successful! Thank you for registering as a donor.');
+      setSnackbarMessage('Registration successful! Redirecting to donor list...');
+      setSnackbarOpen(true);
+      
+      setFormData({
+        name: '',
+        location: '',
+        bloodGroup: '',
+        email: '',
+        phoneNumber: '',
+        lastDonatedDate: '',
+        facebookProfileUrl: ''
+      });
+
+      setTimeout(() => {
+        navigate('/donors');
+      }, 2000);
+
+    } catch (err) {
+      console.error('Registration error:', err);
+      console.error('Error details:', {
+        response: err.response?.data,
+        status: err.response?.status,
+        config: err.config
+      });
+      
+      let errorMessage = '';
+      
+      if (err.response) {
+        // Server responded with error
+        errorMessage = err.response.data?.error || 'Server error. Please try again.';
+      } else if (err.request) {
+        // Request was made but no response
+        errorMessage = 'Cannot connect to server. Please check your connection.';
+      } else {
+        // Client-side error
+        errorMessage = err.message || 'An unexpected error occurred.';
+      }
+      
+      setError(errorMessage);
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleFindDonors = () => {
@@ -276,11 +207,8 @@ function DonorForm() {
       try {
         const response = await api.post('/api/donors', formData);
         console.log('Donor registered:', response.data);
-        setSnackbar({ 
-          open: true, 
-          message: 'Registration successful! Redirecting to donor list...', 
-          severity: 'success'
-        });
+        setSnackbarMessage('Registration successful! Redirecting to donor list...');
+        setSnackbarOpen(true);
         setTimeout(() => {
           navigate('/');
         }, 2000);
@@ -306,11 +234,8 @@ function DonorForm() {
           errorMessage += 'An unexpected error occurred. Please try again.';
         }
         
-        setSnackbar({
-          open: true,
-          message: errorMessage,
-          severity: 'error'
-        });
+        setSnackbarMessage(errorMessage);
+        setSnackbarOpen(true);
       }
     } else if (action === 'find') {
       navigate('/');
@@ -318,7 +243,7 @@ function DonorForm() {
   };
 
   const handleSnackbarClose = () => {
-    setSnackbar({ ...snackbar, open: false });
+    setSnackbarOpen(false);
   };
 
   return (
@@ -427,8 +352,8 @@ function DonorForm() {
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    error={!!errors.name}
-                    helperText={errors.name}
+                    error={!!error}
+                    helperText={error}
                   />
                 </Grid>
 
@@ -441,8 +366,8 @@ function DonorForm() {
                     value={formData.bloodGroup}
                     onChange={handleChange}
                     required
-                    error={!!errors.bloodGroup}
-                    helperText={errors.bloodGroup}
+                    error={!!error}
+                    helperText={error}
                   >
                     {bloodGroups.map((group) => (
                       <MenuItem key={group} value={group}>
@@ -460,8 +385,8 @@ function DonorForm() {
                     value={formData.location}
                     onChange={handleChange}
                     required
-                    error={!!errors.location}
-                    helperText={errors.location}
+                    error={!!error}
+                    helperText={error}
                     placeholder="Enter your city or area"
                   />
                 </Grid>
@@ -481,8 +406,8 @@ function DonorForm() {
                     name="phoneNumber"
                     value={formData.phoneNumber}
                     onChange={handleChange}
-                    error={!!errors.phoneNumber}
-                    helperText={errors.phoneNumber || 'Enter 11 digit number (optional if Facebook provided)'}
+                    error={!!error}
+                    helperText={error || 'Enter 11 digit number (optional if Facebook provided)'}
                     placeholder="01XXXXXXXXX"
                   />
                 </Grid>
@@ -496,8 +421,8 @@ function DonorForm() {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    error={!!errors.email}
-                    helperText={errors.email || 'Enter your Gmail address'}
+                    error={!!error}
+                    helperText={error || 'Enter your Gmail address'}
                     placeholder="example@gmail.com"
                   />
                 </Grid>
@@ -510,8 +435,8 @@ function DonorForm() {
                     name="lastDonatedDate"
                     value={formData.lastDonatedDate}
                     onChange={handleChange}
-                    error={!!errors.lastDonatedDate}
-                    helperText={errors.lastDonatedDate || 'When did you last donate blood? (Optional)'}
+                    error={!!error}
+                    helperText={error || 'When did you last donate blood? (Optional)'}
                     InputLabelProps={{
                       shrink: true,
                     }}
@@ -528,12 +453,12 @@ function DonorForm() {
                     name="facebookProfileUrl"
                     value={formData.facebookProfileUrl}
                     onChange={handleChange}
-                    error={!!errors.facebookProfileUrl}
-                    helperText={errors.facebookProfileUrl || 'Enter complete profile URL (optional if Phone provided)'}
+                    error={!!error}
+                    helperText={error || 'Enter complete profile URL (optional if Phone provided)'}
                     placeholder="https://www.facebook.com/username"
                     sx={{
                       '& .MuiFormHelperText-root': {
-                        color: errors.facebookProfileUrl ? 'error.main' : 'text.secondary',
+                        color: error ? 'error.main' : 'text.secondary',
                         marginLeft: 0,
                         marginTop: 1
                       }
@@ -554,8 +479,9 @@ function DonorForm() {
                         py: 1.5,
                         fontSize: '1.1rem',
                       }}
+                      disabled={isSubmitting}
                     >
-                      Register as Donor
+                      {isSubmitting ? 'Registering...' : '❤️ Register as Donor'}
                     </Button>
                     <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
                       By registering, you agree to our terms and conditions
@@ -567,22 +493,15 @@ function DonorForm() {
           </Paper>
         </Container>
 
-        <TermsDialog
-          open={termsDialog.open}
-          onClose={handleTermsClose}
-          onAccept={handleTermsAccept}
-          title={termsDialog.title}
-        />
-
         <Snackbar
-          open={snackbar.open}
+          open={snackbarOpen}
           autoHideDuration={6000}
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          message={snackbar.message}
+          onClose={handleSnackbarClose}
+          message={snackbarMessage}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
           ContentProps={{
             sx: { 
-              bgcolor: snackbar.severity === 'error' ? 'error.main' : 'success.main',
+              bgcolor: snackbarMessage.includes('Registration successful') ? 'success.main' : 'error.main',
               color: '#fff',
               '& .MuiSnackbarContent-message': {
                 fontSize: '1rem',
