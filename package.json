@@ -4,7 +4,7 @@
   "description": "Blood Donation Application",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node server.js & node worker.js",
     "server": "nodemon server.js",
     "client": "cd client && npm start",
     "client-install": "cd client && npm install",

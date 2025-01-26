@@ -10,32 +10,23 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Atlas Connection with retry logic
+// MongoDB Atlas Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/bloodDonation';
 
 const connectDB = async () => {
     try {
         await mongoose.connect(MONGODB_URI, {
             useNewUrlParser: true,
-            useUnifiedTopology: true,
-            retryWrites: true,
-            w: 'majority'
+            useUnifiedTopology: true
         });
         console.log('MongoDB connected successfully');
-        
-        // Start server only after successful DB connection
-        const PORT = process.env.PORT || 3000;
-        app.listen(PORT, '0.0.0.0', () => {
-            console.log(`Server is running on port ${PORT}`);
-        });
+        startServer();
     } catch (err) {
         console.error('MongoDB connection error:', err);
         // Retry connection after 5 seconds
         setTimeout(connectDB, 5000);
     }
 };
-
-connectDB();
 
 // API Routes
 app.get('/api/donors', async (req, res) => {
@@ -81,14 +72,43 @@ app.post('/api/donors', async (req, res) => {
 
 // Serve static files from the React app in production
 if (process.env.NODE_ENV === 'production') {
-    // Serve any static files
     app.use(express.static(path.join(__dirname, 'client/build')));
     
-    // Handle React routing, return all requests to React app
     app.get('*', (req, res) => {
         res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
     });
 }
+
+// Function to start the server
+const startServer = () => {
+    const PORT = process.env.PORT || 3000;
+    const server = app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server is running on port ${PORT}`);
+    });
+
+    // Handle server errors
+    server.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.log('Address in use, retrying...');
+            setTimeout(() => {
+                server.close();
+                server.listen(PORT, '0.0.0.0');
+            }, 1000);
+        }
+    });
+};
+
+// Keep the process alive
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (err) => {
+    console.error('Unhandled Rejection:', err);
+});
+
+// Connect to database
+connectDB();
 
 // Handle MongoDB connection events
 mongoose.connection.on('error', (err) => {
@@ -97,6 +117,8 @@ mongoose.connection.on('error', (err) => {
 
 mongoose.connection.on('disconnected', () => {
     console.log('MongoDB disconnected');
+    // Try to reconnect
+    setTimeout(connectDB, 5000);
 });
 
 // Graceful shutdown
