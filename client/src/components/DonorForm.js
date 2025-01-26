@@ -135,15 +135,15 @@ function DonorForm() {
       }
 
       console.log('Form data passed validation:', formData);
-      console.log('Making API request to:', api.defaults.baseURL);
       
-      const response = await api.post('/', formData);
+      const response = await api.post('/donors', formData);
       console.log('Server response:', response.data);
       
       setSuccess('Registration successful! Thank you for registering as a donor.');
       setSnackbarMessage('Registration successful! Redirecting to donor list...');
       setSnackbarOpen(true);
       
+      // Clear form data
       setFormData({
         name: '',
         location: '',
@@ -154,17 +154,11 @@ function DonorForm() {
         facebookProfileUrl: ''
       });
 
-      setTimeout(() => {
-        navigate('/donors');
-      }, 2000);
+      // Navigate immediately to the donor list
+      navigate('/');
 
     } catch (err) {
       console.error('Registration error:', err);
-      console.error('Error details:', {
-        response: err.response?.data,
-        status: err.response?.status,
-        config: err.config
-      });
       
       let errorMessage = '';
       
@@ -188,11 +182,7 @@ function DonorForm() {
   };
 
   const handleFindDonors = () => {
-    setTermsDialog({
-      open: true,
-      action: 'find',
-      title: 'Access Donor Information',
-    });
+    navigate('/');
   };
 
   const handleTermsClose = () => {

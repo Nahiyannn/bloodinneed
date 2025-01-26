@@ -21,6 +21,8 @@ import {
   Stack,
   Avatar,
   Divider,
+  Alert,
+  Snackbar
 } from '@mui/material';
 import {
   Favorite,
@@ -33,8 +35,7 @@ import {
   ArrowBack,
   BloodtypeOutlined,
 } from '@mui/icons-material';
-import axios from 'axios';
-import TermsDialog from './TermsDialog';
+import api from '../config/api';
 
 const theme = createTheme({
   palette: {
@@ -49,52 +50,24 @@ const theme = createTheme({
       main: '#f5f5f5',
       light: '#ffffff',
       dark: '#e0e0e0',
-      contrastText: '#000',
     },
     background: {
-      default: '#fafafa',
-      paper: '#ffffff',
-    },
-    error: {
-      main: '#d32f2f',
-    },
-    success: {
-      main: '#2e7d32',
+      default: '#f5f5f5',
     },
   },
   typography: {
-    fontFamily: "'Inter', 'Roboto', 'Arial', sans-serif",
-    h3: {
-      fontWeight: 700,
-      letterSpacing: '-0.5px',
-    },
-    h5: {
-      fontWeight: 600,
-      letterSpacing: '-0.5px',
-    },
-    button: {
-      textTransform: 'none',
+    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    h1: {
       fontWeight: 600,
     },
-  },
-  shape: {
-    borderRadius: 12,
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
           borderRadius: 8,
-          padding: '10px 24px',
-          fontSize: '1rem',
-        },
-        containedPrimary: {
-          background: 'linear-gradient(45deg, #d32f2f 30%, #ef5350 90%)',
-          boxShadow: '0 3px 12px rgba(211, 47, 47, 0.3)',
-          '&:hover': {
-            background: 'linear-gradient(45deg, #c62828 30%, #d32f2f 90%)',
-            boxShadow: '0 4px 15px rgba(211, 47, 47, 0.4)',
-          },
+          textTransform: 'none',
+          fontWeight: 600,
         },
       },
     },
@@ -119,50 +92,43 @@ const bloodGroups = ['All', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 function DonorList() {
   const navigate = useNavigate();
   const [donors, setDonors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedBloodGroup, setSelectedBloodGroup] = useState('All');
-  const [termsDialog, setTermsDialog] = useState({
-    open: false,
-    title: 'Register as Blood Donor',
-  });
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   useEffect(() => {
-    const fetchDonors = async () => {
-      try {
-        const response = await axios.get('http://localhost:5000/api/donors');
-        setDonors(response.data);
-      } catch (error) {
-        console.error('Error fetching donors:', error);
-        setSnackbar({
-          open: true,
-          message: 'Failed to fetch donors. Please try again later.',
-          severity: 'error'
-        });
-      }
-    };
     fetchDonors();
-  }, []);
+  }, [selectedBloodGroup]);
+
+  const fetchDonors = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await api.get(selectedBloodGroup === 'All' ? '/' : `/?bloodGroup=${selectedBloodGroup}`);
+      setDonors(response.data);
+    } catch (err) {
+      console.error('Error fetching donors:', err);
+      setError('Failed to load donors. Please try again.');
+      setSnackbarMessage('Failed to load donors. Please try again.');
+      setSnackbarOpen(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRegisterClick = () => {
-    setTermsDialog({ ...termsDialog, open: true });
-  };
-
-  const handleTermsClose = () => {
-    setTermsDialog({ ...termsDialog, open: false });
-  };
-
-  const handleTermsAccept = () => {
-    setTermsDialog({ ...termsDialog, open: false });
     navigate('/register');
   };
 
-  const filteredDonors = selectedBloodGroup === 'All'
-    ? donors
-    : donors.filter(donor => donor.bloodGroup === selectedBloodGroup);
+  const handleBloodGroupChange = (event) => {
+    setSelectedBloodGroup(event.target.value);
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+  };
 
   return (
     <ThemeProvider theme={theme}>
@@ -195,23 +161,20 @@ function DonorList() {
               <Stack direction="row" alignItems="center" spacing={1}>
                 <LocalHospital />
                 <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
-                  BloodinNeed
+                  BloodInNeed
                 </Typography>
               </Stack>
               <Box sx={{ flexGrow: 1 }} />
               <Button
                 variant="contained"
-                color="inherit"
+                color="secondary"
                 startIcon={<Add />}
                 onClick={handleRegisterClick}
-                sx={{
-                  bgcolor: 'rgba(255,255,255,0.9)',
+                sx={{ 
                   color: 'primary.main',
-                  '&:hover': { 
-                    bgcolor: 'rgba(255,255,255,1)',
-                    transform: 'translateY(-2px)',
-                    transition: 'all 0.2s',
-                  },
+                  '&:hover': {
+                    backgroundColor: 'secondary.dark'
+                  }
                 }}
               >
                 Register as Donor
@@ -220,142 +183,143 @@ function DonorList() {
           </Container>
         </AppBar>
 
-        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
-          <Box sx={{ textAlign: 'center', color: 'white', mb: 6, mt: 4 }}>
-            <Typography variant="h3" gutterBottom>
-              Find Blood Donors
-            </Typography>
-            <Typography variant="h5" sx={{ opacity: 0.9 }}>
-              Connect with willing donors in your area
-            </Typography>
-          </Box>
+        <Container maxWidth="lg" sx={{ mt: 4, position: 'relative', zIndex: 1 }}>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  p: 3, 
+                  bgcolor: 'rgba(255,255,255,0.8)',
+                  backdropFilter: 'blur(20px)',
+                  borderRadius: 2
+                }}
+              >
+                <Grid container spacing={2} alignItems="center">
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="h5" component="h1" sx={{ color: 'text.primary', mb: 1 }}>
+                      Find Blood Donors
+                    </Typography>
+                    <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                      Connect with blood donors in your area
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      select
+                      fullWidth
+                      label="Blood Group"
+                      value={selectedBloodGroup}
+                      onChange={handleBloodGroupChange}
+                      variant="outlined"
+                      sx={{ bgcolor: 'white' }}
+                    >
+                      {bloodGroups.map((group) => (
+                        <MenuItem key={group} value={group}>
+                          {group}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Grid>
 
-          <Box sx={{ mb: 4 }}>
-            <Grid container spacing={2} justifyContent="center">
-              <Grid item xs={12} md={6}>
-                <Paper 
-                  elevation={0}
-                  sx={{ 
-                    p: 2,
-                    display: 'flex',
-                    gap: 1,
-                    flexWrap: 'wrap',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'rgba(255,255,255,0.9)',
-                    backdropFilter: 'blur(10px)',
-                  }}
-                >
-                  <BloodtypeOutlined color="primary" />
-                  <Typography variant="subtitle1" sx={{ mr: 2 }}>
-                    Filter by Blood Group:
+            {loading ? (
+              <Grid item xs={12}>
+                <Typography>Loading donors...</Typography>
+              </Grid>
+            ) : error ? (
+              <Grid item xs={12}>
+                <Alert severity="error">{error}</Alert>
+              </Grid>
+            ) : donors.length === 0 ? (
+              <Grid item xs={12}>
+                <Paper sx={{ p: 3, textAlign: 'center' }}>
+                  <Typography variant="h6">No donors found</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Be the first to register as a donor!
                   </Typography>
-                  {bloodGroups.map((group) => (
-                    <Chip
-                      key={group}
-                      label={group}
-                      onClick={() => setSelectedBloodGroup(group)}
-                      color={selectedBloodGroup === group ? 'primary' : 'default'}
-                      variant={selectedBloodGroup === group ? 'filled' : 'outlined'}
-                      sx={{ 
-                        borderRadius: '8px',
-                        '&:hover': {
-                          bgcolor: selectedBloodGroup === group ? 'primary.dark' : 'rgba(0,0,0,0.1)',
-                        },
-                      }}
-                    />
-                  ))}
                 </Paper>
               </Grid>
-            </Grid>
-          </Box>
-
-          <Grid container spacing={3}>
-            {filteredDonors.map((donor) => (
-              <Grid item xs={12} sm={6} md={4} key={donor._id}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Avatar 
-                        sx={{ 
-                          bgcolor: 'primary.main',
-                          width: 56,
-                          height: 56,
-                          fontSize: '1.5rem',
-                          fontWeight: 'bold',
-                        }}
-                      >
-                        {donor.bloodGroup}
-                      </Avatar>
-                      <Box sx={{ ml: 2 }}>
-                        <Typography variant="h6" gutterBottom>
-                          {donor.name}
-                        </Typography>
-                        <Chip 
-                          size="small"
-                          label={donor.bloodGroup}
-                          color="primary"
-                          sx={{ borderRadius: '6px' }}
-                        />
-                      </Box>
-                    </Box>
-
-                    <Stack spacing={2}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <LocationOn color="action" />
-                        <Typography variant="body2" color="text.secondary">
-                          {donor.location}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Phone color="action" />
-                        <Typography variant="body2" color="text.secondary">
-                          {donor.phoneNumber}
-                        </Typography>
-                      </Box>
-
-                      {donor.lastDonatedDate ? (
-                        <Grid container spacing={1} alignItems="center">
-                          <Grid item>
-                            <CalendarToday fontSize="small" color="action" />
-                          </Grid>
-                          <Grid item>
-                            <Typography variant="body2">
-                              Last Donated: {format(new Date(donor.lastDonatedDate), 'dd/MM/yyyy')}
-                            </Typography>
-                          </Grid>
-                        </Grid>
-                      ) : null}
-                    </Stack>
-
-                    {donor.facebookProfileUrl && (
-                      <Button
-                        fullWidth
-                        variant="outlined"
-                        color="primary"
-                        startIcon={<Facebook />}
-                        href={donor.facebookProfileUrl}
-                        target="_blank"
-                        sx={{ mt: 2 }}
-                      >
-                        View Profile
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
+            ) : (
+              <Grid item xs={12}>
+                <Grid container spacing={3}>
+                  {donors.map((donor) => (
+                    <Grid item xs={12} sm={6} md={4} key={donor._id}>
+                      <Card>
+                        <CardContent>
+                          <Stack spacing={2}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center">
+                              <Typography variant="h6" component="h2">
+                                {donor.name}
+                              </Typography>
+                              <Chip
+                                label={donor.bloodGroup}
+                                color="primary"
+                                size="small"
+                                icon={<BloodtypeOutlined />}
+                              />
+                            </Stack>
+                            
+                            <Stack spacing={1}>
+                              <Stack direction="row" spacing={1} alignItems="center">
+                                <LocationOn color="action" fontSize="small" />
+                                <Typography variant="body2">{donor.location}</Typography>
+                              </Stack>
+                              
+                              {donor.phoneNumber && (
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                  <Phone color="action" fontSize="small" />
+                                  <Typography variant="body2">{donor.phoneNumber}</Typography>
+                                </Stack>
+                              )}
+                              
+                              {donor.lastDonatedDate && (
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                  <CalendarToday color="action" fontSize="small" />
+                                  <Typography variant="body2">
+                                    Last donated: {format(new Date(donor.lastDonatedDate), 'PP')}
+                                  </Typography>
+                                </Stack>
+                              )}
+                              
+                              {donor.facebookProfileUrl && (
+                                <Button
+                                  variant="outlined"
+                                  startIcon={<Facebook />}
+                                  href={donor.facebookProfileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  size="small"
+                                  fullWidth
+                                >
+                                  Facebook Profile
+                                </Button>
+                              )}
+                            </Stack>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
               </Grid>
-            ))}
+            )}
           </Grid>
         </Container>
-
-        <TermsDialog
-          open={termsDialog.open}
-          onClose={handleTermsClose}
-          onAccept={handleTermsAccept}
-          title={termsDialog.title}
-        />
       </Box>
+      
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleSnackbarClose} severity="error" sx={{ width: '100%' }}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </ThemeProvider>
   );
 }
