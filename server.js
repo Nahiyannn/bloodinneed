@@ -17,13 +17,29 @@ console.log('Current environment:', {
     PORT: process.env.PORT || 5000
 });
 
-// Redirect middleware for onrender.com to custom domain
+// Force HTTPS and handle domain redirects
 app.use((req, res, next) => {
+    // Clear browser cache headers
+    res.set({
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store'
+    });
+
     const host = req.get('host');
-    // Check if we're on the Render domain
+    const protocol = req.protocol;
+
+    // If we're not on HTTPS, redirect to HTTPS
+    if (process.env.NODE_ENV === 'production' && protocol !== 'https') {
+        return res.redirect(301, `https://${host}${req.originalUrl}`);
+    }
+
+    // If we're on the Render domain, redirect to custom domain
     if (host.includes('onrender.com')) {
         return res.redirect(301, `https://bloodinneed.org${req.originalUrl}`);
     }
+
     next();
 });
 
@@ -37,8 +53,17 @@ app.use(cors({
 // Parse JSON bodies
 app.use(express.json());
 
-// Serve static files from the React app
-app.use(express.static(path.join(__dirname, 'client/build')));
+// Serve static files with cache control
+app.use(express.static(path.join(__dirname, 'client/build'), {
+    maxAge: '0',
+    setHeaders: (res, path) => {
+        res.set({
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
+    }
+}));
 
 // API routes
 app.use('/api/donors', donorRoutes);
@@ -70,6 +95,11 @@ const connectDB = async () => {
 
 // Handle all other routes by serving the React app
 app.get('*', (req, res) => {
+    res.set({
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    });
     res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
 });
 
