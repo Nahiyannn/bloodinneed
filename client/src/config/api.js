@@ -2,26 +2,17 @@ import axios from 'axios';
 
 // Get base URL based on environment
 const getBaseURL = () => {
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    
-    if (isLocalhost) {
-        // In development, use the proxy configured in package.json
-        return '/api/donors';
-    } else {
-        // In production, use relative path
-        return '/api/donors';
+    if (process.env.NODE_ENV === 'development') {
+        return '/api/donors';  // In development, use the proxy configured in package.json
     }
+    return '/api/donors';  // In production, use relative path
 };
 
 // Create axios instance with base configuration
 const api = axios.create({
     baseURL: getBaseURL(),
     headers: {
-        'Content-Type': 'application/json',
-        // Add CORS headers
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
+        'Content-Type': 'application/json'
     },
     timeout: 10000
 });
@@ -30,7 +21,11 @@ const api = axios.create({
 api.interceptors.request.use(
     config => {
         console.log('Making request to:', config.url);
-        console.log('Request config:', config);
+        console.log('Request config:', {
+            method: config.method,
+            url: config.url,
+            data: config.data
+        });
         return config;
     },
     error => {
@@ -42,32 +37,25 @@ api.interceptors.request.use(
 // Add response interceptor for error handling
 api.interceptors.response.use(
     response => {
-        console.log('Received response:', response);
+        console.log('Response status:', response.status);
+        console.log('Response data:', response.data);
         return response;
     },
     error => {
-        console.error('API Error:', error);
-        console.error('Error details:', {
-            response: error.response?.data,
-            status: error.response?.status,
-            url: error.config?.url
-        });
-        
-        // Handle network errors
-        if (!error.response) {
-            return Promise.reject({ 
-                error: 'Network error. Please check your internet connection and try again.' 
+        if (error.response) {
+            // Server responded with error
+            console.error('Server error:', {
+                status: error.response.status,
+                data: error.response.data
             });
+        } else if (error.request) {
+            // Request was made but no response
+            console.error('No response received:', error.request);
+        } else {
+            // Something else went wrong
+            console.error('Error:', error.message);
         }
-        
-        // Handle API errors
-        if (error.response.data) {
-            return Promise.reject(error.response.data);
-        }
-        
-        return Promise.reject({ 
-            error: 'An unexpected error occurred. Please try again.' 
-        });
+        return Promise.reject(error);
     }
 );
 

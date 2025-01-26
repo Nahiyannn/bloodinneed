@@ -136,7 +136,8 @@ function DonorForm() {
 
       console.log('Form data passed validation:', formData);
       
-      const response = await api.post('/donors', formData);
+      // Make POST request to root endpoint since baseURL already includes /api/donors
+      const response = await api.post('/', formData);
       console.log('Server response:', response.data);
       
       setSuccess('Registration successful! Thank you for registering as a donor.');
