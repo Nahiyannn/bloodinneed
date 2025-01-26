@@ -14,7 +14,7 @@ const app = express();
 console.log('Current environment:', {
     MONGODB_URI: process.env.MONGODB_URI ? 'Set' : 'Not set',
     NODE_ENV: process.env.NODE_ENV || 'development',
-    PORT: process.env.PORT || 5000
+    PORT: process.env.PORT || 10000
 });
 
 // Security middleware
@@ -78,7 +78,7 @@ const connectDB = async () => {
         console.log('Connected to MongoDB Atlas');
         
         // Start server after successful DB connection
-        const PORT = process.env.PORT || 5000;
+        const PORT = process.env.PORT || 10000;
         app.listen(PORT, '0.0.0.0', () => {
             console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
         });
