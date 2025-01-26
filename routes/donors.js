@@ -6,13 +6,15 @@ const Donor = require('../models/Donor');
 router.get('/', async (req, res) => {
     try {
         const bloodGroup = req.query.bloodGroup;
-        console.log('Received blood group query:', bloodGroup);
-
-        const query = bloodGroup && bloodGroup !== 'All' ? { bloodGroup: bloodGroup } : {};
-        console.log('MongoDB query:', query);
-
-        const donors = await Donor.find(query).sort({ createdAt: -1 });
-        console.log(`Found ${donors.length} donors with blood group ${bloodGroup || 'All'}`);
+        const query = {};
+        
+        if (bloodGroup && bloodGroup !== 'All') {
+            query.bloodGroup = bloodGroup;
+        }
+        
+        const donors = await Donor.find(query)
+            .sort({ createdAt: -1 })
+            .select('-__v');
         
         res.json(donors);
     } catch (error) {
