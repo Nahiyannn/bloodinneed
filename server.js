@@ -17,6 +17,16 @@ console.log('Current environment:', {
     PORT: process.env.PORT || 5000
 });
 
+// Redirect middleware for onrender.com to custom domain
+app.use((req, res, next) => {
+    const host = req.get('host');
+    // Check if we're on the Render domain
+    if (host.includes('onrender.com')) {
+        return res.redirect(301, `https://bloodinneed.org${req.originalUrl}`);
+    }
+    next();
+});
+
 // CORS configuration
 app.use(cors({
     origin: true,
