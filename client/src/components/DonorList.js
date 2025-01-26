@@ -172,8 +172,11 @@ function DonorList() {
                 onClick={handleRegisterClick}
                 sx={{ 
                   color: 'primary.main',
+                  bgcolor: 'white',
                   '&:hover': {
-                    backgroundColor: 'secondary.dark'
+                    bgcolor: 'secondary.dark',
+                    transform: 'translateY(-2px)',
+                    transition: 'all 0.2s'
                   }
                 }}
               >
@@ -197,10 +200,10 @@ function DonorList() {
               >
                 <Grid container spacing={2} alignItems="center">
                   <Grid item xs={12} md={6}>
-                    <Typography variant="h5" component="h1" sx={{ color: 'text.primary', mb: 1 }}>
+                    <Typography variant="h5" component="h1" sx={{ color: 'white', mb: 1 }}>
                       Find Blood Donors
                     </Typography>
-                    <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                    <Typography variant="body1" sx={{ color: 'white', opacity: 0.9 }}>
                       Connect with blood donors in your area
                     </Typography>
                   </Grid>
@@ -212,11 +215,25 @@ function DonorList() {
                       value={selectedBloodGroup}
                       onChange={handleBloodGroupChange}
                       variant="outlined"
-                      sx={{ bgcolor: 'white' }}
+                      sx={{ 
+                        bgcolor: 'white',
+                        borderRadius: 1,
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': {
+                            borderColor: 'transparent',
+                          },
+                          '&:hover fieldset': {
+                            borderColor: 'transparent',
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderColor: 'primary.main',
+                          },
+                        },
+                      }}
                     >
-                      {bloodGroups.map((group) => (
-                        <MenuItem key={group} value={group}>
-                          {group}
+                      {bloodGroups.map((bloodGroup) => (
+                        <MenuItem key={bloodGroup} value={bloodGroup}>
+                          {bloodGroup}
                         </MenuItem>
                       ))}
                     </TextField>
