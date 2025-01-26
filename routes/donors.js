@@ -8,16 +8,19 @@ router.get('/', async (req, res) => {
     console.log('Query params:', req.query);
     
     try {
-        const { bloodGroup } = req.query;
-        const query = bloodGroup && bloodGroup !== 'All' ? { bloodGroup } : {};
+        let query = {};
+        if (req.query.bloodGroup && req.query.bloodGroup !== 'All') {
+            query.bloodGroup = req.query.bloodGroup;
+            console.log('Filtering by blood group:', req.query.bloodGroup);
+        }
         
         console.log('MongoDB query:', query);
         
         const donors = await Donor.find(query)
             .sort({ createdAt: -1 })
-            .select('-__v'); // Exclude version field
+            .select('-__v');
         
-        console.log(`Found ${donors.length} donors`);
+        console.log(`Found ${donors.length} donors matching query:`, query);
         res.json(donors);
     } catch (error) {
         console.error('Error fetching donors:', error);

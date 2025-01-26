@@ -99,6 +99,7 @@ function DonorList() {
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
   useEffect(() => {
+    console.log('Selected blood group changed:', selectedBloodGroup);
     fetchDonors();
   }, [selectedBloodGroup]);
 
@@ -106,8 +107,11 @@ function DonorList() {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get(selectedBloodGroup === 'All' ? '' : `?bloodGroup=${selectedBloodGroup}`);
-      console.log('Fetched donors:', response.data);
+      console.log('Fetching donors for blood group:', selectedBloodGroup);
+      const response = await api.get('/', {
+        params: selectedBloodGroup === 'All' ? {} : { bloodGroup: selectedBloodGroup }
+      });
+      console.log('API Response:', response.data);
       setDonors(response.data);
     } catch (err) {
       console.error('Error fetching donors:', err);
@@ -124,6 +128,7 @@ function DonorList() {
   };
 
   const handleBloodGroupChange = (event) => {
+    console.log('Blood group selected:', event.target.value);
     setSelectedBloodGroup(event.target.value);
   };
 
