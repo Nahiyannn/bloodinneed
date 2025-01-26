@@ -193,17 +193,34 @@ function DonorList() {
                 elevation={0}
                 sx={{ 
                   p: 3, 
-                  bgcolor: 'rgba(255,255,255,0.8)',
-                  backdropFilter: 'blur(20px)',
-                  borderRadius: 2
+                  bgcolor: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: 2,
+                  border: '1px solid rgba(255,255,255,0.2)'
                 }}
               >
                 <Grid container spacing={2} alignItems="center">
                   <Grid item xs={12} md={6}>
-                    <Typography variant="h5" component="h1" sx={{ color: 'white', mb: 1 }}>
+                    <Typography 
+                      variant="h5" 
+                      component="h1" 
+                      sx={{ 
+                        color: 'white', 
+                        mb: 1,
+                        fontWeight: 600,
+                        textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }}
+                    >
                       Find Blood Donors
                     </Typography>
-                    <Typography variant="body1" sx={{ color: 'white', opacity: 0.9 }}>
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        color: 'white', 
+                        opacity: 0.95,
+                        textShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                      }}
+                    >
                       Connect with blood donors in your area
                     </Typography>
                   </Grid>
