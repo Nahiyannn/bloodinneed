@@ -107,16 +107,18 @@ function DonorList() {
     try {
       setLoading(true);
       setError(null);
-      console.log('Fetching donors for blood group:', selectedBloodGroup);
-      const response = await api.get('/', {
-        params: selectedBloodGroup === 'All' ? {} : { bloodGroup: selectedBloodGroup }
-      });
-      console.log('API Response:', response.data);
+      
+      let url = '/';
+      if (selectedBloodGroup !== 'All') {
+        url = `/?bloodGroup=${selectedBloodGroup}`;
+      }
+      
+      const response = await api.get(url);
       setDonors(response.data);
     } catch (err) {
       console.error('Error fetching donors:', err);
-      setError('Failed to load donors. Please try again.');
-      setSnackbarMessage('Failed to load donors. Please try again.');
+      setError('Failed to load donors');
+      setSnackbarMessage('Failed to load donors');
       setSnackbarOpen(true);
     } finally {
       setLoading(false);
@@ -128,8 +130,9 @@ function DonorList() {
   };
 
   const handleBloodGroupChange = (event) => {
-    console.log('Blood group selected:', event.target.value);
-    setSelectedBloodGroup(event.target.value);
+    const value = event.target.value;
+    console.log('Selected blood group:', value);
+    setSelectedBloodGroup(value);
   };
 
   const handleSnackbarClose = () => {

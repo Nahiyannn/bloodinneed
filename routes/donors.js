@@ -4,30 +4,20 @@ const Donor = require('../models/Donor');
 
 // Get all donors or filter by blood group
 router.get('/', async (req, res) => {
-    console.log('GET /api/donors request received');
-    console.log('Query params:', req.query);
-    
     try {
-        let query = {};
-        if (req.query.bloodGroup && req.query.bloodGroup !== 'All') {
-            query.bloodGroup = req.query.bloodGroup;
-            console.log('Filtering by blood group:', req.query.bloodGroup);
-        }
-        
+        const bloodGroup = req.query.bloodGroup;
+        console.log('Received blood group query:', bloodGroup);
+
+        const query = bloodGroup && bloodGroup !== 'All' ? { bloodGroup: bloodGroup } : {};
         console.log('MongoDB query:', query);
+
+        const donors = await Donor.find(query).sort({ createdAt: -1 });
+        console.log(`Found ${donors.length} donors with blood group ${bloodGroup || 'All'}`);
         
-        const donors = await Donor.find(query)
-            .sort({ createdAt: -1 })
-            .select('-__v');
-        
-        console.log(`Found ${donors.length} donors matching query:`, query);
         res.json(donors);
     } catch (error) {
         console.error('Error fetching donors:', error);
-        res.status(500).json({ 
-            error: 'Error fetching donors. Please try again.',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
+        res.status(500).json({ error: 'Error fetching donors' });
     }
 });
 
